@@ -1,0 +1,71 @@
+View Source
+{alias:Rails - Getting Started}
+based on v28 (2010/08/09 更新) - [オリジナル|DOCS:Rails - Getting Started]
+
+Rails 3を使っていますか？その場合はこちらを参照してください [Rails 3 - Getting Started]
+
+このチュートリアルでは、オブジェクトマッパーであるMongoMapperを利用してMongoDBと接続するシンプルなRailsアプリケーション
+の作成方法を説明します。3.0以前のバージョンのRailsを利用していることを前提としています。
+{toc}{*}Railsテンプレートの利用*
+以降に示されている全ての設定手順と、さらにその他についても、[こちらのRailsテンプレート|http://gist.github.com/219223] ([raw version| http://gist.github.com/219223.txt])に含められています。これは[Ben Scofield氏が作成した同様のもの|http://gist.github.com/181842]をベースとしたものです。以下のように、このテンプレートを利用してRailsのプロジェクトを作成することができます。
+
+{code}rails project_name -m "http://gist.github.com/219223.txt"{code}*project_name*の部分を作成するプロジェクトに合わせて適宜変更してください。
+
+もし一からプロジェクトを作成したい場合は、以下を続けて読んでください。
+
+h3. Configuration
+
+1. 利用するデータベースを、MongoMapperに知らせる必要があります。*config/initializers/database.rb*に以下のように記述し保存します。
+
+{code}MongoMapper.database = "db_name-#{Rails.env}"{code}*db_name*の部分を利用するデータベース名に合わせて変更してください。*Rails.env*変数により、各環境モード毎に異なるデータベースが利用されることを保証されます。
+
+2. もしPassengerを利用している場合は、*config/initializers/database.rb*に以下のコードを追加します。
+{code}if defined?(PhusionPassenger)
+PhusionPassenger.on_event(:starting_worker_process) do |forked|
+MongoMapper.connection.connect_to_master if forked
+end
+end
+{code}3. *config/database.yml*は記述なしの状態にします。通常のデータベース接続を行わないので、このファイルは記述なしである必要があります。
+
+4. environment.rbでActiveRecordを無効にします。
+{code}config.frameworks -= [:active_record]{code}
+
+5. この環境にMongoMapperを追加します。 *config/environment.rb*を開き、以下の設定で追加することができます。:
+{code}config.gem 'mongo_mapper'{code}この設定を行っておけば、以下のrakeコマンドを実行することでgemパッケージをプロジェクトにインストールすることができます。:
+{code}rake gems:install
+rake gems:unpack{code}
+h3. Testing
+
+MongoDBを利用する上で留意しておくべき重要なことは、実行するテストケースにトランザクションを効かせることができないということです。取りうる一つの次善策は、各テストの後処理として*teardown*メソッドを実行し、データベースを空の状態にするという方法があります。
+
+これを自動化するために、*ActiveSupport::TestCase*へ以下のコードのように変更を加えることが効果的です。
+
+{code}# Drop all columns after each test case.
+def teardown
+MongoMapper.database.collections.each do |coll|
+coll.remove
+end
+end
+
+# Make sure that each test case has a teardown
+# method to clear the db after each test.
+def inherited(base)
+base.define_method teardown do
+super
+end
+end{code}この方法により、全てのテストクラスで自動的にteardownメソッドが実行されるようになります。上記の例では、teardownメソッドで各コレクションを削除しています。それぞれのコレクションをドロップするか、データベース全体をドロップするかを選択したくなるかもしれませんが、それはかなりコストがかかりますし、テストがインデックスを扱うような場合にしか必要とされません。
+
+通常、このコードは*test/test_helper.rb*に追加します。詳しくは[the aforementioned rails template|http://gist.github.com/219223]を参照してください。
+
+h3. Coding
+
+以上の各ステップを行っていれば（もしくはテンプレートを利用してRailsのプロジェクトを作成しているなら）、コーディングを始める準備はできています。コーディングを進める参考には、[modeling your domain in Rails|MongoDB Data Modeling and Rails]を読むとよいでしょう。
+
+
+    * Powered by Atlassian Confluence 3.0.0_01, the Enterprise Wiki.
+    * Printed by Atlassian Confluence 3.0.0_01, the Enterprise Wiki.
+    * Bug/feature request –
+    * Atlassian news –
+    * Contact administrators
+
+
