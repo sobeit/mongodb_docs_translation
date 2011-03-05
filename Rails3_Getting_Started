@@ -1,0 +1,141 @@
+{alias:Rails3 - Getting Started}
+based on v23 (2011/02/27 更新) - [オリジナル|DOCS:Rails3 - Getting Started]
+
+Rails3でMongoDBを利用するのは難しくありません。ほとんどが、ActiveRecorを確実にロードされないようにすることと、新しいRubyの
+依存性管理ツールである[Bundler|http://github.com/carlhuda/bundler/blob/master/README.markdown]の使い方を理解することに
+要約されます。
+
+{toc}
+
+h3. Install the Rails 3
+
+Rails3をまだインストールしていない場合は、インストールします。
+{code}
+# Use sudo if your setup requires it
+gem install rails
+{code}
+
+h3. Configure your application
+
+ここで重要なのは、ActiveRecordのロードをしないようにすることです。一つの方法としては、{{--skip-active-record}}スイッチを
+付けます。次に示すようにアプリケーションの雛形を作ることになります。
+
+{code}
+rails new my_app --skip-active-record
+{code}
+
+または、すでにアプリケーションを作成した（または実際に何が行われるのか知りたい）場合は、{{config/application.rb}}を見て、
+最初の行を以下の記述から
+
+{code}
+require "rails/all"
+{code}
+
+次のように変更します。
+
+{code}
+require "action_controller/railtie"
+require "action_mailer/railtie"
+require "active_resource/railtie"
+require "rails/test_unit/railtie"
+{code}
+
+生成ブロックにあるactive_recordへの参照の記述についても、確実にコメントアウトしておくことが重要です。
+
+{code}
+# Configure generators values. Many other options are available, be sure to check the documentation.
+# config.generators do |g|
+# g.orm :active_record
+# g.template_engine :erb
+# g.test_framework :test_unit, :fixture => true
+# end
+{code}
+
+ここに書いてあるように、デフォルトではコメントアウトされた状態なので、おそらく何も変える必要はないはずです。
+
+h3. Bundle and Initialize
+
+最後の手順は必要とするgemをバンドルすることとデータベースに接続するためのイニシャライザを作成することです。
+
+h4. Bundling
+
+{{Gemfile}}を編集し、Railsのルートディレクトリを指定します。デフォルトでは{{Gemfile}}にはRailsのロードのみが指定されています。:
+
+{code}
+gem "rails", "3.0.0"
+{code}
+
+通常、MongoDBを利用する場合は、[OM framework|http://www.mongodb.org/display/DOCS/Object+Mappers+for+Ruby+and+MongoDB]で示されるもののうち、利用したいいずれかのものの指定を単純に追加することであり、それらはデフォルトで"mongo"gemを必要とします。
+
+{code}
+# Edit this Gemfile to bundle your application's dependencies.
+
+source 'http://gemcutter.org'
+
+gem "rails", "3.0.0"
+gem "mongo_mapper"
+{code}
+
+しかし、現行バージョンのgemspecはBundlerの動作と互換性がないので、現状bson_extのロードには問題があります。すぐに修正する予定ですので、[この問題|http://jira.mongodb.org/browse/RUBY-95]の修正状況を確認するようにしてください。
+
+修正されるまでの間、以下の回避策で対処することができます。:
+
+{code}
+# Edit this Gemfile to bundle your application's dependencies.
+
+require 'rubygems'
+require 'mongo'
+source 'http://gemcutter.org'
+
+gem "rails", "3.0.0"
+gem "mongo_mapper"
+{code}
+
+{{gem}}コマンドの実行によりbson_extがロードされる前に{{rubygems}}と{{mongo}}の指定をします。もし{{rubygems}}のロードをしたくない場合は、{{mongo}}と{{bson_ext}}の両方の指定を{{mongo}}を必要とする時にロードパスに確実に含めます。
+
+{{Gemfile}}の設定が完了したら、bundle installerを実行します。:
+
+{code}
+bundle install
+{code}
+
+
+h4. Initializing
+
+最後に必要なことは、MongoDBに接続するためのイニシャライザを作成することです。{{config/initializers}}にRubyのファイルを作成します。任意の名前で作成してください。ここでは{{config/initializers/mongo.rb}}とします。:
+
+{code}
+MongoMapper.connection = Mongo::Connection.new('localhost', 27017)
+MongoMapper.database = "#myapp-#{Rails.env}"
+
+if defined?(PhusionPassenger)
+PhusionPassenger.on_event(:starting_worker_process) do |forked|
+MongoMapper.connection.connect if forked
+end
+end
+{code}
+
+h3. Running Tests
+
+{{rake test}}を動作させるためには、微修正が必要です(John P. Woodさん、ありがとう)。以下の内容を含めて{{lib/tasks/mongo.rake}}のファイルを作成してください。
+
+{code}
+namespace :db do
+namespace :test do
+task :prepare do
+# Stub out for MongoDB
+end
+end
+end
+{code}
+
+現在では、多数の{{rake test}}タスクが正しく実行されます。詳しくは[Johnの投稿|http://johnpwood.net/2010/04/13/getting-rake-test-running-with-rails-3-and-mongodb/]を参照してください。
+
+h3. Conclusion
+
+以上が必要な全てです。これでインストールされているどのOMを利用したモデルも作ることができるようになります。
+
+h3. See also
+
+* [Rails 3 App skeleton with MongoMapper|http://github.com/banker/mongodb-rails3-sample]
+* [Rails 3 Release Notes|http://guides.rails.info/3_0_release_notes.html] 
