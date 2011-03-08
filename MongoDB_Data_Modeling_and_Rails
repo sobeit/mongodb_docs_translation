@@ -50,7 +50,7 @@ h4. Fields as arrays
 
 ドキュメントデータベースを利用する場合は、ここで'voters'キーで行うように、投票をユーザIDの配列として格納するのがより自然です。
 
-高速な検索を実効するために、このフィールドにインデックスを作成することができます。MongoDBシェルで以下のように実行します。:
+高速な検索を実効するために、このフィールドにインデックスを作成することができます。MongoDBシェルでは以下のように実行します。:
 
 {code} db.stories.ensureIndex('voters');
 {code}または、MongoMapperを利用しているなら、*config/initializers/database.rb*にインデックスの指定を設定することができます。:
@@ -138,13 +138,13 @@ h4. Nested, Embedded Comments
 @stories.save(@document)
 {code}MongoMapperを利用してこの構造を表現しようとすると、いくつかのカスタムモジュールが必要とされる、手の込んだ方法で行うことになります。
 
-ですが、この構造にはいくつかの利点があります。ネストされたものは、ドキュメントの中にそれ自体を含められます(これは、実際に、[Business Insiderのコメントを表現するのにもちいられている方法です。|http://www.businessinsider.com/how-we-use-mongodb-2009-11])。また、このスキーマは、アプリケーション側の処理でツリー構造を作成することなしに、1つのクエリーですべてのコメントとともに記事を得ることができることによ、高いパフォーマンスを実現します。
+ですが、この構造にはいくつかの利点があります。ネストされたものは、ドキュメントの中にそれ自体を含められます(これは、実際に、[Business Insiderのコメントを表現するのにもちいられている方法|http://www.businessinsider.com/how-we-use-mongodb-2009-11]です)。また、このスキーマは、アプリケーション側の処理でツリー構造を作成することなしに、1つのクエリーですべてのコメントとともに記事を得られることにより、高いパフォーマンスを実現します。
 
 1つの欠点としては、コメントツリーの表示方式にはいくつかの大幅な再構成が必要となることがあげられます。
 
 h4. Comment collections
 
-コメントはそれ自体のコレクションとして示すこともできます。他の選択肢と比べて、これはよりすばらしい柔軟性を得られる代わりに少しのパフォーマンス上の犠牲を払うことになります。ツリー構造はそれぞれのリーフへのユニークなパスを保存することで表現されます(このアイデアについての[Mathiasのオリジナルの投稿|http://groups.google.com/group/mongodb-user/browse_thread/thread/3e10a4b409dd6cb4/ccc9de1fafafe37e?lnk=gst&q=trees#ccc9de1fafafe37e]を参照のこと)。以下がこのモデルに関連する部分です。:
+コメントはそれ自体のコレクションとして表すこともできます。他の選択肢と比べて、これはよりすばらしい柔軟性を得られる代わりに、少しのパフォーマンス上の犠牲を払うことになります。ツリー構造はそれぞれのリーフへのユニークなパスを保存することで表現されます(このアイデアについての[Mathiasのオリジナルの投稿|http://groups.google.com/group/mongodb-user/browse_thread/thread/3e10a4b409dd6cb4/ccc9de1fafafe37e?lnk=gst&q=trees#ccc9de1fafafe37e]を参照のこと)。以下がこのモデルに関連する部分です。:
 
 {code}class Comment
 include MongoMapper::Document
@@ -176,14 +176,14 @@ self.path = parent.path + ":" + parent.id
 end
 save
 end
-{code}このパスはオブジェクトIDの文字列表現で終わっています。これにより、関係性または投票に従った並びの各レベルのネストしたコメントを、より容易に表示させます。もしstory_id、path、そしてvotesにインデックスを貼っていれば、データベースはネストされ、ソートされたコメントの取得を半分のコストで実行できます。
+{code}このパスはオブジェクトIDの文字列表現で示すことになります。これにより、コメント同士の関係性、または投票に従った並びの各レベルのネストしたコメントを、より容易に提示できます。もしstory_id、path、そしてvotesにインデックスを貼っていれば、データベースはネストされ、ソートされたコメントの取得を半分のコストで実行できます。
 
-The rest of the work can be accomplished with a couple grouping methods, which can be found in [the newsmonger source code|http://github.com/banker/newsmonger/blob/master/app/models/comment.rb].
+残り部分については[newsmongerのソースコード|http://github.com/banker/newsmonger/blob/master/app/models/comment.rb]の中から見つけることができる、一連のグループ化のメソッドで完成させることができます。
 
-It goes without saying that modeling comments in their own collection also facilitates various site-wide aggregations, including displaying the latest, grouping by user, etc.
+コメントそれ自体をコレクションとしてモデリングすることにより、最新のコメントの表示やユーザによるグループ化などを含めた、サイト全体にわたる様々な集約が容易になることは、言うまでもないことです。
 
 h3. Unfinished business
 
-Document-oriented data modeling is still young. The fact is, many more applications will need to be built on the document model before we can say anything definitive about best practices. So the foregoing should be taken as suggestions, only. As you discover new patterns, we encourage you to document them, and feel free to let us know about what works (and what doesn't).
+Document-orientedなデータモデリングはまだ歴史が浅いものです。実際、ベストプラクティスについて、何かしら確実なことが言えるようになる以前に、より多くアプリケーションがドキュメントモデルで構築される必要があります。ですから、ここまでで示してきたものは、提案としてのみ扱われるべきでしょう。新しいパターンを発見した時には、それを記録して、どんなことをするのか（そしてどんなことをしないのか）を自由に知らせていただくことをお推めします。
 
-Developers working on object mappers and the like are encouraged to implement the best document patterns in their code, and to be wary of recreating relational database models in their apps. 
+オブジェクトマッパーやそれらの類のものを使っている開発者の方達には、コードにより最適なドキュメントのパターンによる実装を行うことや、リレーショナルデータベースからの再構築を行う場合の注意点を上げることを推奨します。
